@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+	var img = new Image();
+	var canvas;
+	var cxt;
+	var w;
+	var h;
+	var k = 3;   //窗口大小
+	var r = 1200;  //阈值
+	//窗口大小
+	function setFiles() {
+		var f = document.getElementById('file').files;
+		if (f.length > 0) {
+			var reader = new FileReader();
+			reader.readAsDataURL(document.getElementById('file').files[0]);
+			reader.onload = function() {
+				canvas = document.getElementById("mycanvas");
+				cxt = canvas.getContext("2d");
+				img.src = this.result;
+				w = img.width;
+				h = img.height;
+				canvas.width = w;
+				canvas.height = h;
+				cxt.drawImage(img, 0, 0, w, h);
+			};
+		}
+	}
+
+	function draw() {
+		ctx = canvas.getContext("2d");
+		var gray = new Array();
+		var rgb = ctx.getImageData(0, 0, w, h);
+		gray[0] = new Array(w);
+		for (var i=0, x = 0,y = 0;i< rgb.data.length;i+=4, x++)
+		  {
+			if(x >= w){
+				x = 0;
+				y++;
+				gray[y] = new Array(w);
+			}
+			gray[y][x] = Math.round(0.299 * rgb.data[i] + 0.587*rgb.data[i+1] + 0.114*rgb.data[i+2]);
+		  }
+		
+		//定义兴趣值的二维数组
+		var Vs = new Array();
+		for(var i = 0; i < parseInt( h - k / 2 ); i++)
+			{
+				Vs[i] = new Array(parseInt( w - k / 2 ));
+			}
+		//遍历图像中每个点(除了被窗口消除的边界点)
+		var y, x;
+		for(y = parseInt ( k / 2 ); y < parseInt( h - k / 2 ); y++)
+			{
+			for(x = parseInt ( k / 2 ); x < parseInt( w - k / 2 ); x++)
+				{	
+					var V1 = 0, V2 = 0, V3 = 0, V4 = 0;
+					
+					//横方向		
+					for(var xi = (x - parseInt( k / 2)); xi < ( x + parseInt(k / 2) - 1 ); xi++)
+						{
+						V1 += (gray[y][xi] - gray[y][xi + 1]) * (gray[y][xi] - gray[y][xi + 1]);
+						}
+					
+					//竖方向
+					for(var yi = (y - parseInt(k / 2)); yi < (y + parseInt(k / 2) - 1); yi++)
+						{
+						V2 += (gray[yi][x] - gray[yi + 1][x]) * (gray[yi][x] - gray[yi + 1][x]);
+						}
+						
+					//左下到右上
+					for(var xi = (x - parseInt( k / 2)); xi < (x + parseInt(k / 2) - 1); xi++)
+						for(var yi = (y - parseInt(k / 2)); yi < (y + parseInt(k / 2) - 1); yi++)
+							{
+							V3 += (gray[yi][xi] - gray[yi + 1][xi + 1]) * (gray[yi][xi] - gray[yi + 1][xi + 1]);
+							}
+					
+					//右下到左上
+					for(var xi = (x + parseInt(k / 2)); xi < (x - parseInt( k / 2) + 1); xi--)
+						for(var yi = (y + parseInt(k / 2)); yi < (y - parseInt(k / 2) + 1); yi--)
+							{
+							V4 += (gray[yi][xi] - gray[yi - 1][xi - 1]) * (gray[yi][xi] - gray[yi - 1][xi - 1]);
+							}
+					
+					
+					Vs[y][x] = Math.max(V1, V2, V3, V4);
+				}
+			}
+		
+		cxt.fillStyle = "#FF0000";
+		cxt.beginPath();
+		for(var i = parseInt ( k / 2 ); i < parseInt( h - k / 2 ); i++)
+		{
+			for(var j = parseInt ( k / 2 ); j < parseInt( w - k / 2 ); j++){
+				if(Vs[i][j] > r)
+					{
+					cxt.moveTo(j, i);
+					cxt.arc(j, i, 1, 0, Math.PI * 2, true);
+					}
+			}
+		}
+		cxt.closePath();
+		cxt.fill();
+		Vs = null;
+	}
+</script>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<style type="text/css">
+#mycanvas {
+	background: #AAAAAA;
+	width: 600px;
+	height:600px;
+}
+#content{
+	margin-left: 600px;
+	margin-top: 150px;
+}
+</style>
+</head>
+<body>
+<div id="content">
+	<table>
+		<tr>
+			<td><input type="file" id="file" onchange='setFiles()' /></td>
+		</tr>
+		<tr>
+			<td><canvas id='mycanvas'></canvas></td>
+		</tr>
+		<tr>
+			<td><input type="button" id="Create" onclick="draw()" value="显示特征点" /></td>
+		</tr>
+	</table>
+</div>
+</body>
+
+</html>
